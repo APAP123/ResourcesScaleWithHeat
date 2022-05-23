@@ -80,10 +80,10 @@ ModUtil.BaseOverride("CreateConsumableItemFromData",
 		consumableItem.Cost = costOverride
 	end
 
-	local costPercentage = 1 + ( GetNumMetaUpgrades( "ShopPricesShrineUpgrade" ) * ( MetaUpgradeData.ShopPricesShrineUpgrade.ChangeValue - 1 ) )
-	costPercentage = costPercentage * GetTotalHeroTraitValue("StoreCostPercentage", {IsPercentage = true})
-	if costPercentage ~= 1 and ( consumableItem.IgnoreCostIncrease == nil or costPercentage < 1 ) then
-		consumableItem.Cost = round( consumableItem.Cost * costPercentage )
+	local costMultiplier = 1 + ( GetNumMetaUpgrades( "ShopPricesShrineUpgrade" ) * ( MetaUpgradeData.ShopPricesShrineUpgrade.ChangeValue - 1 ) )
+	costMultiplier = costMultiplier * GetTotalHeroTraitValue("StoreCostMultiplier", {IsMultiplier = true})
+	if costMultiplier ~= 1 and ( consumableItem.IgnoreCostIncrease == nil or costMultiplier < 1 ) then
+		consumableItem.Cost = round( consumableItem.Cost * costMultiplier )
 	end
 
 	-- Apply bonuses
@@ -93,7 +93,7 @@ ModUtil.BaseOverride("CreateConsumableItemFromData",
 		  	printString = ("+" .. (metaPointsPercentage * 100) .. "% {!Icons.MetaPoint_Small} from {!Icons.ShrinePointSmall_Active} bonus!")
 		end
 		if consumableItem.AddResources.Gems ~= nil then
-			consumableItem.AddResources.Gems = round( consumableItem.AddResources.Gems * ( GetTotalHeroTraitValue( "GemPercentage", { IsPercentage = true } ) + gemsPercentage ) )
+			consumableItem.AddResources.Gems = round( consumableItem.AddResources.Gems * (GetTotalHeroTraitValue( "GemMultiplier", { IsMultiplier = true } ) + gemsPercentage) )
 			printString = ("+" .. (gemsPercentage * 100) .. "% {!Icons.GemSmall} from {!Icons.ShrinePointSmall_Active} bonus!")
 		end
 		if consumableItem.AddResources.LockKeys ~= nil then
