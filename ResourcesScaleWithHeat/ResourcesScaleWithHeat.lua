@@ -8,7 +8,7 @@ Author: Freakanoid
 -]]
 
 --[[
-    Github location: https://github.com/APAP123/ScaleResourcesWithHeat
+    Github: https://github.com/APAP123/ResourcesScaleWithHeat
 ]]
 
 ModUtil.RegisterMod("ResourcesScaleWithHeat")
