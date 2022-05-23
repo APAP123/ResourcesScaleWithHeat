@@ -36,6 +36,7 @@ local config = {
 	}
 }
 
+-- test
 ResourcesScaleWithHeat.Config = config
 
 -- Sets bonus to 0 if divisor is 0 to prevent divide-by-zero inf
