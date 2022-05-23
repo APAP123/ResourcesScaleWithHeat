@@ -16,16 +16,18 @@ ModUtil.RegisterMod("ResourcesScaleWithHeat")
 -- Customize values here.
 local config = {
 
-	-- Set this value to false to disable bonus display text, and set it to true to enable bonus display text.
-	DisplayText = true
+	-- true: displays text above resources
+	-- false: does not display text above resources
+	DisplayText = true,
 
-	-- Percentages; for example, if Darkness is set to 0.05, then every 1 Heat gives you an extra 5% Darkness.
-	Multiplier = {
+	-- Percentage bonuses; for example, if Darkness is set to 0.05, then every 1 Heat gives you an extra 5% Darkness.
+	Percentage = {
 		Darkness = 0.05,
 		Gems = 0.05
 	  },
 
-	Divisor = { -- Amount of Heat per extra pick-up; for example, if Keys is set to 8, then you get 1 extra Key every 8 Heat.
+	-- Amount of Heat per extra pick-up; for example, if Keys is set to 8, then you get 1 extra Key every 8 Heat.
+	Divisor = {
 		Keys = 8,
 		Nectar = 8,
 		Blood = 16,
@@ -44,23 +46,22 @@ function CalculateBonus( heat, divisor )
 	return round(heat / divisor)
 end
 
--- Creation test
+-- Override
 ModUtil.BaseOverride("CreateConsumableItemFromData", 
-function( consumableId, consumableItem, costOverride, args )
-	--mine
-	local multiplier = ResourcesScaleWithHeat.Config.Multiplier
+  function( consumableId, consumableItem, costOverride, args )
+	-- mod variables
+	local percentage = ResourcesScaleWithHeat.Config.Percentage
 	local divisor = ResourcesScaleWithHeat.Config.Divisor
 	local currentHeat = GetTotalSpentShrinePoints()
-	local metaPointsPercentage = multiplier.Darkness * currentHeat
-	local gemsPercentage =  multiplier.Gems * currentHeat
+	local metaPointsPercentage = percentage.Darkness * currentHeat
+	local gemsPercentage =  percentage.Gems * currentHeat
 	local lockKeyBonus = CalculateBonus(currentHeat, divisor.Keys)
 	local giftPointsBonus = CalculateBonus(currentHeat, divisor.Nectar)
-	local SuperLockKeyMultiplier = CalculateBonus(currentHeat, divisor.Blood)
-	local SuperGiftPointsMultiplier = CalculateBonus(currentHeat, divisor.Ambrosia)
-	local SuperGemsMultiplier = CalculateBonus(currentHeat, divisor.Diamond)
+	local superLockKeyBonus = CalculateBonus(currentHeat, divisor.Blood)
+	local superGiftPointsBonus = CalculateBonus(currentHeat, divisor.Ambrosia)
+	local superGemsBonus = CalculateBonus(currentHeat, divisor.Diamond)
 	local printString = ""
 	local printId = consumableId
-	--endmine
 
 	args = args or {}
 	consumableItem.ObjectId = consumableId
@@ -79,21 +80,21 @@ function( consumableId, consumableItem, costOverride, args )
 		consumableItem.Cost = costOverride
 	end
 
-	local costMultiplier = 1 + ( GetNumMetaUpgrades( "ShopPricesShrineUpgrade" ) * ( MetaUpgradeData.ShopPricesShrineUpgrade.ChangeValue - 1 ) )
-	costMultiplier = costMultiplier * GetTotalHeroTraitValue("StoreCostMultiplier", {IsMultiplier = true})
-	if costMultiplier ~= 1 and ( consumableItem.IgnoreCostIncrease == nil or costMultiplier < 1 ) then
-		consumableItem.Cost = round( consumableItem.Cost * costMultiplier )
+	local costPercentage = 1 + ( GetNumMetaUpgrades( "ShopPricesShrineUpgrade" ) * ( MetaUpgradeData.ShopPricesShrineUpgrade.ChangeValue - 1 ) )
+	costPercentage = costPercentage * GetTotalHeroTraitValue("StoreCostPercentage", {IsPercentage = true})
+	if costPercentage ~= 1 and ( consumableItem.IgnoreCostIncrease == nil or costPercentage < 1 ) then
+		consumableItem.Cost = round( consumableItem.Cost * costPercentage )
 	end
 
-	-- Standard
+	-- Apply bonuses
 	if consumableItem.AddResources ~= nil then
 		if consumableItem.AddResources.MetaPoints ~= nil then
 			ModUtil.Hades.
-		  	consumableItem.AddResources.MetaPoints = round( consumableItem.AddResources.MetaPoints * (CalculateMetaPointMultiplier() + metaPointsPercentage) )
+		  	consumableItem.AddResources.MetaPoints = round( consumableItem.AddResources.MetaPoints * (CalculateMetaPointPercentage() + metaPointsPercentage) )
 		  	printString = ("+" .. (metaPointsPercentage * 100) .. "% {!Icons.MetaPoint_Small} from {!Icons.ShrinePointSmall_Active} bonus!")
 		end
 		if consumableItem.AddResources.Gems ~= nil then
-			consumableItem.AddResources.Gems = round( consumableItem.AddResources.Gems * ( GetTotalHeroTraitValue( "GemMultiplier", { IsMultiplier = true } ) + gemsPercentage ) )
+			consumableItem.AddResources.Gems = round( consumableItem.AddResources.Gems * ( GetTotalHeroTraitValue( "GemPercentage", { IsPercentage = true } ) + gemsPercentage ) )
 			printString = ("+" .. (gemsPercentage * 100) .. "% {!Icons.GemSmall} from {!Icons.ShrinePointSmall_Active} bonus!")
 		end
 		if consumableItem.AddResources.LockKeys ~= nil then
@@ -104,10 +105,10 @@ function( consumableId, consumableItem, costOverride, args )
 		  	end
 		end
 		if consumableItem.AddResources.SuperLockKeys ~= nil then
-			consumableItem.AddResources.SuperLockKeys = consumableItem.AddResources.SuperLockKeys + SuperLockKeyMultiplier
+			consumableItem.AddResources.SuperLockKeys = consumableItem.AddResources.SuperLockKeys + superLockKeyBonus
 		  -- Print conditions
-		  	if SuperLockKeyMultiplier > 0 then
-			 	printString = ("+" .. SuperLockKeyMultiplier .. " {!Icons.SuperLockKeySmall} from {!Icons.ShrinePointSmall_Active} bonus!")
+		  	if superLockKeyBonus > 0 then
+			 	printString = ("+" .. superLockKeyBonus .. " {!Icons.SuperLockKeySmall} from {!Icons.ShrinePointSmall_Active} bonus!")
 		  	end
 		end
 		if consumableItem.AddResources.GiftPoints ~= nil then
@@ -118,24 +119,26 @@ function( consumableId, consumableItem, costOverride, args )
 		  	end
 		end
 		if consumableItem.AddResources.SuperGiftPoints ~= nil then
-			consumableItem.AddResources.SuperGiftPoints = consumableItem.AddResources.SuperGiftPoints + SuperGiftPointsMultiplier
+			consumableItem.AddResources.SuperGiftPoints = consumableItem.AddResources.SuperGiftPoints + superGiftPointsBonus
 		  -- Print Conditions
-		  	if SuperGiftPointsMultiplier > 0 then
-			  	printString = ("+" .. SuperGiftPointsMultiplier .. " {!Icons.SuperGiftPointSmall} from {!Icons.ShrinePointSmall_Active} bonus!")
+		  	if superGiftPointsBonus > 0 then
+			  	printString = ("+" .. superGiftPointsBonus .. " {!Icons.SuperGiftPointSmall} from {!Icons.ShrinePointSmall_Active} bonus!")
 		  	end
 		end
 		if consumableItem.AddResources.SuperGems ~= nil then
-			consumableItem.AddResources.SuperGems = consumableItem.AddResources.SuperGems + SuperGemsMultiplier
-			if SuperGemsMultiplier > 0 then
-				printString = ("+" .. SuperGemsMultiplier .. " {!Icons.SuperGemSmall} from {!Icons.ShrinePointSmall_Active} bonus!")
+			consumableItem.AddResources.SuperGems = consumableItem.AddResources.SuperGems + superGemsBonus
+			if superGemsBonus > 0 then
+				printString = ("+" .. superGemsBonus .. " {!Icons.SuperGemSmall} from {!Icons.ShrinePointSmall_Active} bonus!")
 			end
 		end
 	  end
 
 	UpdateCostText( consumableItem )
 
-	ModUtil.Hades.PrintOverhead(printString, 3, Color.White, printId)
+	if ResourcesScaleWithHeat.Config.DisplayText and currentHeat > 0 then 
+		ModUtil.Hades.PrintOverhead(printString, 3, Color.White, printId)
+	end
 
 	return consumableItem
   end
-  )
+)
