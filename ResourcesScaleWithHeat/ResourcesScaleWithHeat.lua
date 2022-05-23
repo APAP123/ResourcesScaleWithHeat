@@ -89,7 +89,6 @@ ModUtil.BaseOverride("CreateConsumableItemFromData",
 	-- Apply bonuses
 	if consumableItem.AddResources ~= nil then
 		if consumableItem.AddResources.MetaPoints ~= nil then
-			ModUtil.Hades.
 		  	consumableItem.AddResources.MetaPoints = round( consumableItem.AddResources.MetaPoints * (CalculateMetaPointPercentage() + metaPointsPercentage) )
 		  	printString = ("+" .. (metaPointsPercentage * 100) .. "% {!Icons.MetaPoint_Small} from {!Icons.ShrinePointSmall_Active} bonus!")
 		end
