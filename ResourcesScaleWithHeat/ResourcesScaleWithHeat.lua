@@ -89,7 +89,7 @@ ModUtil.BaseOverride("CreateConsumableItemFromData",
 	-- Apply bonuses
 	if consumableItem.AddResources ~= nil then
 		if consumableItem.AddResources.MetaPoints ~= nil then
-		  	consumableItem.AddResources.MetaPoints = round( consumableItem.AddResources.MetaPoints * (CalculateMetaPointPercentage() + metaPointsPercentage) )
+		  	consumableItem.AddResources.MetaPoints = round( consumableItem.AddResources.MetaPoints * (CalculateMetaPointMultiplier() + metaPointsPercentage) )
 		  	printString = ("+" .. (metaPointsPercentage * 100) .. "% {!Icons.MetaPoint_Small} from {!Icons.ShrinePointSmall_Active} bonus!")
 		end
 		if consumableItem.AddResources.Gems ~= nil then
@@ -130,7 +130,7 @@ ModUtil.BaseOverride("CreateConsumableItemFromData",
 				printString = ("+" .. superGemsBonus .. " {!Icons.SuperGemSmall} from {!Icons.ShrinePointSmall_Active} bonus!")
 			end
 		end
-	  end
+	end
 
 	UpdateCostText( consumableItem )
 
