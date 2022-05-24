@@ -43,7 +43,7 @@ function CalculateBonus( heat, divisor )
 	if divisor == 0 then
 		return 0
 	end
-	return round(heat / divisor)
+	return math.floor(heat / divisor)
 end
 
 -- Override
@@ -139,5 +139,81 @@ ModUtil.BaseOverride("CreateConsumableItemFromData",
 	end
 
 	return consumableItem
+  end
+)
+
+-- Needed to handle chamber reward overrides
+ModUtil.BaseOverride("ApplyConsumableItemResourceMultiplier", 
+  function(currentRoom, reward )
+		-- mod variables
+		local percentage = ResourcesScaleWithHeat.Config.Percentage
+		local divisor = ResourcesScaleWithHeat.Config.Divisor
+		local currentHeat = GetTotalSpentShrinePoints()
+		local metaPointsPercentage = percentage.Darkness * currentHeat
+		local gemsPercentage =  percentage.Gems * currentHeat
+		local lockKeyBonus = CalculateBonus(currentHeat, divisor.Keys)
+		local giftPointsBonus = CalculateBonus(currentHeat, divisor.Nectar)
+		local superLockKeyBonus = CalculateBonus(currentHeat, divisor.Blood)
+		local superGiftPointsBonus = CalculateBonus(currentHeat, divisor.Ambrosia)
+		local superGemsBonus = CalculateBonus(currentHeat, divisor.Diamond)
+
+	local gemRewardMultiplier = GetTotalHeroTraitValue("GemRewardBonus", { IsMultiplier = true }) + gemsPercentage
+	local metapointRewardMultiplier = GetTotalHeroTraitValue("MetapointRewardBonus", { IsMultiplier = true }) + metaPointsPercentage
+	local coinRewardMultiplier = GetTotalHeroTraitValue("MoneyRewardBonus", { IsMultiplier = true })
+	local healthRewardMultiplier = GetTotalHeroTraitValue("HealthRewardBonus", { IsMultiplier = true })
+	if reward.AddResources ~= nil then
+		if reward.AddResources.Gems ~= nil then
+			reward.AddResources.Gems = round( reward.AddResources.Gems * gemRewardMultiplier )
+		end
+		if reward.AddResources.MetaPoints ~= nil then
+			reward.AddResources.MetaPoints = round( reward.AddResources.MetaPoints * metapointRewardMultiplier )
+		end
+	end
+	if reward.AddMaxHealth ~= nil then
+		reward.AddMaxHealth = round( reward.AddMaxHealth * healthRewardMultiplier )
+	end
+	
+	local rewardOverrides = currentRoom.RewardConsumableOverrides or currentRoom.RewardOverrides
+	if rewardOverrides ~= nil and ( rewardOverrides.ValidRewardNames == nil or Contains( rewardOverrides.ValidRewardNames, reward.Name )) then
+		for key, value in pairs( rewardOverrides ) do
+			if reward[key] ~= nil then
+				reward[key] = value
+				if key == "AddResources"  then
+					if reward.AddResources.MetaPoints ~= nil and not currentRoom.IgnoreMetaPointMultiplier then
+						reward.AddResources.MetaPoints = round( reward.AddResources.MetaPoints * ( 1 + (  CalculateMetaPointMultiplier() - 1 ) + ( metapointRewardMultiplier - 1 )))
+					end
+					if reward.AddResources.Gems ~= nil then
+						reward.AddResources.Gems = round( reward.AddResources.Gems * gemRewardMultiplier )
+
+						local gemMultiplier = GetTotalHeroTraitValue( "GemMultiplier", { IsMultiplier = true } )
+						reward.AddResources.Gems = round( reward.AddResources.Gems * ( 1 + ( gemMultiplier - 1 ) + ( gemRewardMultiplier - 1 )))
+					end
+					if reward.AddResources.LockKeys ~= nil then
+						reward.AddResources.LockKeys = reward.AddResources.LockKeys + lockKeyBonus
+					end
+					if reward.AddResources.SuperLockKeys ~= nil then
+						reward.AddResources.SuperLockKeys = reward.AddResources.SuperLockKeys + superLockKeyBonus
+					end
+					if reward.AddResources.GiftPoints ~= nil then
+						reward.AddResources.GiftPoints = reward.AddResources.GiftPoints + giftPointsBonus
+					end
+					if reward.AddResources.SuperGiftPoints ~= nil then
+						reward.AddResources.SuperGiftPoints = reward.AddResources.SuperGiftPoints + superGiftPointsBonus
+					end
+					if reward.AddResources.SuperGems ~= nil then
+						reward.AddResources.SuperGems = reward.AddResources.SuperGems + superGemsBonus
+					end
+				elseif key == "AddMaxHealth" and reward.AddMaxHealth ~= nil then
+					reward.AddMaxHealth = round( reward.AddMaxHealth * healthRewardMultiplier )
+					ExtractValues( CurrentRun.Hero, reward, reward )
+				end
+			end
+		end
+	end
+
+	if reward.DropMoney ~= nil then
+		local moneyMultiplier = GetTotalHeroTraitValue( "MoneyMultiplier", { IsMultiplier = true } )
+		reward.DropMoney = round( reward.DropMoney * ( 1 + ( moneyMultiplier - 1 ) + ( coinRewardMultiplier - 1 )))
+	end
   end
 )
