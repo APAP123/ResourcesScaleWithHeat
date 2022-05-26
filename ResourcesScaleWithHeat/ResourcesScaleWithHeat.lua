@@ -1,5 +1,5 @@
 --[[
-Mod: Resources Scale With Heat
+Mod: Resources Scale With Heat 1.0.2
 Author: Freakanoid
 
 	A simple mod that makes resource drops (darkness, gemstones, keys, etc) scale with Heat level.
@@ -145,17 +145,17 @@ ModUtil.BaseOverride("CreateConsumableItemFromData",
 -- Needed to handle chamber reward overrides
 ModUtil.BaseOverride("ApplyConsumableItemResourceMultiplier", 
   function(currentRoom, reward )
-		-- mod variables
-		local percentage = ResourcesScaleWithHeat.Config.Percentage
-		local divisor = ResourcesScaleWithHeat.Config.Divisor
-		local currentHeat = GetTotalSpentShrinePoints()
-		local metaPointsPercentage = percentage.Darkness * currentHeat
-		local gemsPercentage =  percentage.Gems * currentHeat
-		local lockKeyBonus = CalculateBonus(currentHeat, divisor.Keys)
-		local giftPointsBonus = CalculateBonus(currentHeat, divisor.Nectar)
-		local superLockKeyBonus = CalculateBonus(currentHeat, divisor.Blood)
-		local superGiftPointsBonus = CalculateBonus(currentHeat, divisor.Ambrosia)
-		local superGemsBonus = CalculateBonus(currentHeat, divisor.Diamond)
+	-- mod variables
+	local percentage = ResourcesScaleWithHeat.Config.Percentage
+	local divisor = ResourcesScaleWithHeat.Config.Divisor
+	local currentHeat = GetTotalSpentShrinePoints()
+	local metaPointsPercentage = percentage.Darkness * currentHeat
+	local gemsPercentage =  percentage.Gems * currentHeat
+	local lockKeyBonus = CalculateBonus(currentHeat, divisor.Keys)
+	local giftPointsBonus = CalculateBonus(currentHeat, divisor.Nectar)
+	local superLockKeyBonus = CalculateBonus(currentHeat, divisor.Blood)
+	local superGiftPointsBonus = CalculateBonus(currentHeat, divisor.Ambrosia)
+	local superGemsBonus = CalculateBonus(currentHeat, divisor.Diamond)
 
 	local gemRewardMultiplier = GetTotalHeroTraitValue("GemRewardBonus", { IsMultiplier = true }) + gemsPercentage
 	local metapointRewardMultiplier = GetTotalHeroTraitValue("MetapointRewardBonus", { IsMultiplier = true }) + metaPointsPercentage
@@ -214,6 +214,79 @@ ModUtil.BaseOverride("ApplyConsumableItemResourceMultiplier",
 	if reward.DropMoney ~= nil then
 		local moneyMultiplier = GetTotalHeroTraitValue( "MoneyMultiplier", { IsMultiplier = true } )
 		reward.DropMoney = round( reward.DropMoney * ( 1 + ( moneyMultiplier - 1 ) + ( coinRewardMultiplier - 1 )))
+	end
+  end
+)
+
+-- Needed for trove rewards
+ModUtil.BaseOverride("HandleChallengeLoot",
+  function( challengeSwitch, challengeEncounter )
+	-- mod variables
+	local percentage = ResourcesScaleWithHeat.Config.Percentage
+	local currentHeat = GetTotalSpentShrinePoints()
+	local metaPointsPercentage = percentage.Darkness * currentHeat
+	local gemsPercentage =  percentage.Gems * currentHeat
+
+	if challengeEncounter ~= nil then
+		Destroy({ Id = challengeSwitch.ValueTextAnchor })
+		SetAnimation({ DestinationId = challengeSwitch.ObjectId, Name = "ChallengeSwitchOpen" })
+
+		-- presentation
+		PlaySound({ Name = "/Leftovers/World Sounds/Caravan Interior/ChestOpen", Id = challengeSwitch.ObjectId })
+		PlaySound({ Name = "/Leftovers/Menu Sounds/EmoteAffection" })
+		local healingMultiplier = CalculateHealingMultiplier()
+		if ( challengeSwitch.RewardType == "Health" and healingMultiplier == 0 ) or (challengeSwitch.RewardType == "Money" and HasHeroTraitValue("BlockMoney")) then
+			thread( PlayVoiceLines, GlobalVoiceLines.ChallengeSwitchEmptyVoiceLines, true )
+		else
+			thread( PlayVoiceLines, GlobalVoiceLines.ChallengeSwitchOpenedVoiceLines, true )
+		end
+
+		UseableOff({ Id = challengeSwitch.ObjectId })
+
+		local lootPointId = CurrentRun.Hero.ObjectId
+		--local angle = GetAngleBetween({ Id = challengeSwitch.ObjectId, DestinationId = lootPointId })
+		local angle = GetAngleBetween({ Id = challengeSwitch.ObjectId, DestinationId = CurrentRun.Hero.ObjectId })
+		local distance = GetDistance({ Id = challengeSwitch.ObjectId, DestinationId = CurrentRun.Hero.ObjectId })
+		local dropOffset = CalcOffset(math.rad(angle), distance/2)
+
+		for lootName, lootData in pairs(challengeEncounter.LootDrops) do
+			if lootData.DropChance == nil or RandomChance(lootData.DropChance) then
+				local minDrop = lootData.MinDrop or 1
+				local maxDrop = lootData.MaxDrop or 1
+				local dropCount = lootData.DropCount or RandomInt(minDrop, maxDrop)
+				for index = 1, dropCount, 1 do
+					local consumableId = SpawnObstacle({ Name = lootName, DestinationId = CurrentRun.Hero.ObjectId, Group = "Standing", ForceToValidLocation = true, })
+					local cost = 0 -- All challenge loot is free
+					CreateConsumableItem( consumableId, lootName, cost )
+					ApplyUpwardForce({ Id = consumableId, Speed = RandomFloat( 500, 700 ) })
+					ApplyForce({ Id = consumableId, Speed = RandomFloat( 50, 100 ), Angle = angle, SelfApplied = true })
+				end
+			end
+		end
+		if challengeSwitch.RewardType == "Money" then
+			local moneyMultiplier = GetTotalHeroTraitValue( "MoneyMultiplier", { IsMultiplier = true } )
+			local amount = round( challengeSwitch.CurrentValue * moneyMultiplier )
+			thread( GushMoney, { Amount = amount, LocationId = challengeSwitch.ObjectId, Radius = 50, Source = challengeSwitch.Name, Offset = dropOffset } )
+		elseif challengeSwitch.RewardType == "Health" then
+			Heal( CurrentRun.Hero, { HealAmount = challengeSwitch.CurrentValue, Name = "HealthChallengeSwitch" } )
+		elseif challengeSwitch.RewardType == "MetaPoints" then
+			local consumableId = SpawnObstacle({ Name = "RoomRewardMetaPointDrop", DestinationId = CurrentRun.Hero.ObjectId, Group = "Standing", ForceToValidLocation = true, })
+			local cost = 0
+			local consumable = CreateConsumableItem( consumableId, "RoomRewardMetaPointDrop", cost )
+			consumable.AddResources = consumable.AddResources or {}
+			consumable.AddResources.MetaPoints = round( challengeSwitch.CurrentValue * (CalculateMetaPointMultiplier() + metaPointsPercentage) )
+			ApplyUpwardForce({ Id = consumableId, Speed = RandomFloat( 500, 700 ) })
+			ApplyForce({ Id = consumableId, Speed = RandomFloat( 50, 100 ), Angle = angle, SelfApplied = true })
+		elseif challengeSwitch.RewardType == "Gems" then
+			local gemMultiplier = GetTotalHeroTraitValue( "GemMultiplier", { IsMultiplier = true } )
+			local consumableId = SpawnObstacle({ Name = "GemDrop", DestinationId = CurrentRun.Hero.ObjectId, Group = "Standing", ForceToValidLocation = true, })
+			local cost = 0
+			local consumable = CreateConsumableItem( consumableId, "GemDrop", cost )
+			consumable.AddResources = consumable.AddResources or {}
+			consumable.AddResources.Gems = round(challengeSwitch.CurrentValue * (gemMultiplier + gemsPercentage) )
+			ApplyUpwardForce({ Id = consumableId, Speed = RandomFloat( 500, 700 ) })
+			ApplyForce({ Id = consumableId, Speed = RandomFloat( 50, 100 ), Angle = angle, SelfApplied = true })
+		end
 	end
   end
 )
