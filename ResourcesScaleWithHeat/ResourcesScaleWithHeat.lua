@@ -1,5 +1,5 @@
 --[[
-Mod: Resources Scale With Heat 1.0.2
+Mod: Resources Scale With Heat 1.0.3
 Author: Freakanoid
 
 	A simple mod that makes resource drops (darkness, gemstones, keys, etc) scale with Heat level.
@@ -163,10 +163,10 @@ ModUtil.BaseOverride("ApplyConsumableItemResourceMultiplier",
 	local healthRewardMultiplier = GetTotalHeroTraitValue("HealthRewardBonus", { IsMultiplier = true })
 	if reward.AddResources ~= nil then
 		if reward.AddResources.Gems ~= nil then
-			reward.AddResources.Gems = round( reward.AddResources.Gems * gemRewardMultiplier )
+			--reward.AddResources.Gems = round( reward.AddResources.Gems * gemRewardMultiplier )
 		end
 		if reward.AddResources.MetaPoints ~= nil then
-			reward.AddResources.MetaPoints = round( reward.AddResources.MetaPoints * metapointRewardMultiplier )
+			--reward.AddResources.MetaPoints = round( reward.AddResources.MetaPoints * metapointRewardMultiplier )
 		end
 	end
 	if reward.AddMaxHealth ~= nil then
