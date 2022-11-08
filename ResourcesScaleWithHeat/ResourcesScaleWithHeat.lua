@@ -1,5 +1,5 @@
 --[[
-Mod: Resources Scale With Heat 1.0.4b
+Mod: Resources Scale With Heat 1.0.4
 Author: Freakanoid
 
 	A simple mod that makes resource drops (darkness, gemstones, keys, etc) scale with Heat level.
@@ -49,8 +49,6 @@ end
 -- Override
 ModUtil.BaseOverride("CreateConsumableItemFromData", 
   function( consumableId, consumableItem, costOverride, args )
-	--DEBUG
-	ModUtil.Hades.PrintStack("CreateConsumableItemFromData called!", 20, Color.Blue)
 	-- mod variables
 	local percentage = ResourcesScaleWithHeat.Config.Percentage
 	local divisor = ResourcesScaleWithHeat.Config.Divisor
@@ -91,26 +89,11 @@ ModUtil.BaseOverride("CreateConsumableItemFromData",
 	-- Apply bonuses
 	if consumableItem.AddResources ~= nil then
 		if consumableItem.AddResources.MetaPoints ~= nil then
-			-- DEBUG
-			local metaBonus = CalculateMetaPointMultiplier() + metaPointsPercentage
-			local metaTotal = round(consumableItem.AddResources.MetaPoints * metaBonus)
-			local initialMeta = consumableItem.AddResources.MetaPoints
-			  --consumableItem.AddResources.MetaPoints = round( consumableItem.AddResources.MetaPoints * (CalculateMetaPointMultiplier() + metaPointsPercentage) )
-			  consumableItem.AddResources.MetaPoints = metaTotal
+			  consumableItem.AddResources.MetaPoints = round( consumableItem.AddResources.MetaPoints * (CalculateMetaPointMultiplier() + metaPointsPercentage) )
 			  printString = ("+" .. (metaPointsPercentage * 100) .. "% {!Icons.MetaPoint_Small} from {!Icons.ShrinePointSmall_Active} bonus!")
-			  ModUtil.Hades.PrintStack("CalculateMetaPointMultipler: " .. CalculateMetaPointMultiplier() .. " MetaPointPercentage: " .. metaPointsPercentage, 20, Color.White)
-			  ModUtil.Hades.PrintStack("InitialMeta: " .. initialMeta .. " MetaBonus: " .. metaBonus .. " MetaTotal: " .. metaTotal, 20, Color.White)
-			  ModUtil.Hades.PrintStack("MetapointRewardBonus: " .. GetTotalHeroTraitValue("MetapointRewardBonus", { IsMultiplier = true }) .. " MetaPointMultiplier: " .. GetTotalHeroTraitValue("MetaPointMultiplier", {IsMultiplier = true}), 20, Color.White)
 		end
 		if consumableItem.AddResources.Gems ~= nil then
-			-- DEBUG
-			local gemBonus = (GetTotalHeroTraitValue( "GemMultiplier", { IsMultiplier = true } ) + gemsPercentage)
-			local gemTotal = round(consumableItem.AddResources.Gems * gemBonus)
-			local initialGems = consumableItem.AddResources.Gems
-			--consumableItem.AddResources.Gems = round( consumableItem.AddResources.Gems * (GetTotalHeroTraitValue( "GemMultiplier", { IsMultiplier = true } ) + gemsPercentage) )
-			consumableItem.AddResources.Gems = gemTotal
-			ModUtil.Hades.PrintStack("InitialGems: " .. initialGems .. " GemBonus: " .. gemBonus .. " GemTotal: " .. gemTotal, 20, Color.White)
-			  ModUtil.Hades.PrintStack("GemRewardBonus: " .. GetTotalHeroTraitValue("GemRewardBonus", { IsMultiplier = true }) .. " GemMultiplier: " .. GetTotalHeroTraitValue("GemMultiplier", {IsMultiplier = true}), 20, Color.White)
+			consumableItem.AddResources.Gems = round( consumableItem.AddResources.Gems * (GetTotalHeroTraitValue( "GemMultiplier", { IsMultiplier = true } ) + gemsPercentage) )
 			printString = ("+" .. (gemsPercentage * 100) .. "% {!Icons.GemSmall} from {!Icons.ShrinePointSmall_Active} bonus!")
 		end
 		if consumableItem.AddResources.LockKeys ~= nil then
@@ -182,11 +165,9 @@ ModUtil.BaseOverride("ApplyConsumableItemResourceMultiplier",
 	if reward.AddResources ~= nil then
 		if reward.AddResources.Gems ~= nil then
 			reward.AddResources.Gems = round( reward.AddResources.Gems * gemRewardMultiplier )
-			ModUtil.Hades.PrintStack("Multiplier Gem PreOverride:" .. reward.AddResources.Gems, 20, Color.Green)
 		end
 		if reward.AddResources.MetaPoints ~= nil then
 			reward.AddResources.MetaPoints = round( reward.AddResources.MetaPoints * metapointRewardMultiplier )
-			ModUtil.Hades.PrintStack("Multiplier Meta PreOverride:" .. reward.AddResources.MetaPoints, 20, Color.Green)
 		end
 	end
 	if reward.AddMaxHealth ~= nil then
@@ -199,24 +180,18 @@ ModUtil.BaseOverride("ApplyConsumableItemResourceMultiplier",
 			if reward[key] ~= nil then
 				reward[key] = value
 				if key == "AddResources"  then
-					--if reward.AddResources.MetaPoints ~= nil and not currentRoom.IgnoreMetaPointMultiplier then
-					if reward.AddResources.MetaPoints ~= nil then
-						ModUtil.Hades.PrintStack("Multiplier Meta PostOverride (Initial value):" .. reward.AddResources.MetaPoints, 20, Color.Green)
+					if reward.AddResources.MetaPoints ~= nil and not currentRoom.IgnoreMetaPointMultiplier then
 						reward.AddResources.MetaPoints = round( reward.AddResources.MetaPoints * (CalculateMetaPointMultiplier() + metaPointsPercentage) )
 						reward.AddResources.MetaPoints = round( reward.AddResources.MetaPoints * metapointRewardMultiplier )
-						--reward.AddResources.MetaPoints = round( reward.AddResources.MetaPoints * ( 1 + (  CalculateMetaPointMultiplier() - 1 ) + ( metapointRewardMultiplier - 1 )))
-						ModUtil.Hades.PrintStack("Multiplier Meta PostOverride (after calc):" .. reward.AddResources.MetaPoints, 20, Color.Green)
 					end
 					if reward.AddResources.Gems ~= nil then
-						-- For some reason, the original script by SGG has the GemRewardMultiplier applied twice here?? This is why Gem amounts with my mod kept getting
-						-- abnormally high - it was applying GemRewardMultiplier (which is used for Ocean's Bounty) twice. Not sure if this was intentional by SGG, but
-						-- I'm commenting it out for now.
+						-- For some reason, the original script by SGG has the GemRewardMultiplier applied twice here. This is why Gem amounts with my mod kept getting
+						-- abnormally high - it was applying GemRewardMultiplier (which is used for Ocean's Bounty) twice, and then applying my mod's bonuses on top of that. 
+						-- Not sure if this behavior was intentional by SGG(it feels like an accidental copy paste), but I'm commenting it out for now.
 						--reward.AddResources.Gems = round( reward.AddResources.Gems * gemRewardMultiplier )
+
 						reward.AddResources.Gems = round( consumableItem.AddResources.Gems * (GetTotalHeroTraitValue( "GemMultiplier", { IsMultiplier = true } ) + gemsPercentage) )
 						reward.AddResources.Gems = round(reward.AddResources.Gems * gemRewardMultiplier)
-						-- local gemMultiplier = GetTotalHeroTraitValue( "GemMultiplier", { IsMultiplier = true } )
-						-- reward.AddResources.Gems = round( reward.AddResources.Gems * ( 1 + ( gemMultiplier - 1 ) + ( gemRewardMultiplier - 1 )))
-						ModUtil.Hades.PrintStack("Multiplier Gem PostOverride:" .. reward.AddResources.Gems, 20, Color.Green)
 					end
 					if reward.AddResources.LockKeys ~= nil then
 						reward.AddResources.LockKeys = reward.AddResources.LockKeys + lockKeyBonus
@@ -333,7 +308,6 @@ function( source, args )
 	local cost = 0
 	local consumable = CreateConsumableItem( consumableId, "RoomRewardMetaPointDrop", cost )
 	local amount = RandomInt( source.MetaPointMin, source.MetaPointMax )
-	ModUtil.Hades.PrintStack("Sisyphus Amount:" .. amount, 20, Color.Green)
 	consumable.AddResources = { MetaPoints = round( amount * (CalculateMetaPointMultiplier() + metaPointsPercentage) ) }
 	SetAnimation({ DestinationId = source.ObjectId, Name = "SisyphusElbowing" })
 	ApplyUpwardForce({ Id = consumableId, Speed = 700 })
