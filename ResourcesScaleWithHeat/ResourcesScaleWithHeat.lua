@@ -1,5 +1,5 @@
 --[[
-Mod: Resources Scale With Heat 1.0.4
+Mod: Resources Scale With Heat 1.0.4b
 Author: Freakanoid
 
 	A simple mod that makes resource drops (darkness, gemstones, keys, etc) scale with Heat level.
@@ -190,7 +190,7 @@ ModUtil.BaseOverride("ApplyConsumableItemResourceMultiplier",
 						-- Not sure if this behavior was intentional by SGG(it feels like an accidental copy paste), but I'm commenting it out for now.
 						--reward.AddResources.Gems = round( reward.AddResources.Gems * gemRewardMultiplier )
 
-						reward.AddResources.Gems = round( consumableItem.AddResources.Gems * (GetTotalHeroTraitValue( "GemMultiplier", { IsMultiplier = true } ) + gemsPercentage) )
+						reward.AddResources.Gems = round( reward.AddResources.Gems * (GetTotalHeroTraitValue( "GemMultiplier", { IsMultiplier = true } ) + gemsPercentage) )
 						reward.AddResources.Gems = round(reward.AddResources.Gems * gemRewardMultiplier)
 					end
 					if reward.AddResources.LockKeys ~= nil then
